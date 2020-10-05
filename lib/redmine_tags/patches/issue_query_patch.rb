@@ -30,12 +30,31 @@ module RedmineTags
         def available_filters_with_tags
           if @available_filters.blank?
             add_available_filter('tags', :type => :list_optional, :name => l(:field_tags),
-              :values => Issue.available_tags(project: project).collect {|t| [t.name, t.name]}
+              :values => available_sorted_tags.collect {|t| [t.name, t.name]}
             ) if !available_filters_without_tags.key?('tags')
           else
             available_filters_without_tags
           end
           @available_filters
+        end
+
+        def available_sorted_tags
+          tags = Issue.available_tags(project: project).to_a
+          case sorting = "#{ RedmineTags.settings[:issues_sort_by] }:#{ RedmineTags.settings[:issues_sort_order] }"
+            when 'name:asc'
+              tags.sort! {|a, b| a.name <=> b.name }
+            when 'name:desc'
+              tags.sort! {|a, b| b.name <=> a.name }
+            when 'count:asc'
+              tags.sort! {|a, b| a.count <=> b.count }
+            when 'count:desc'
+              tags.sort! {|a, b| b.count <=> a.count }
+            else
+              # Unknown sorting option. Fallback to default one
+              logger.warn "[redmine_tags] Unknown sorting option: <#{ sorting }>"
+              tags.sort! {|a, b| a.name <=> b.name }
+          end
+          return tags
         end
 
         def available_columns_with_tags
